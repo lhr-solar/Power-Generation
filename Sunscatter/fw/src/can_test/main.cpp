@@ -29,7 +29,7 @@ void send() {
 
 /** This test sets up the CAN driver on the Nucleo and attempts to communicate with itself. */
 int main() {
-    ticker.attach(&send, 1);
+    ticker.attach(&send, 1000us);
     CANMessage msg;
     can.mode(CAN::LocalTest);
     
@@ -48,7 +48,7 @@ int main() {
             printf("Message received: %d\n", msg.data[0]);
         } else {
             printf("No message.\n");
-            ThisThread::sleep_for(200);
+            ThisThread::sleep_for(200ms);
         }
     }
 }
@@ -99,4 +99,3 @@ int main() {
 }
 #undef MODE
 #endif
-
