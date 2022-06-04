@@ -2,100 +2,76 @@
  * @file main.cpp
  * @author Matthew Yu (matthewjkyu@gmail.com) and Roy Mor (roymor.102@gmail.com)
  * @brief Test main that tests the CAN hardware on the v3.3.0 MPPTs.
- * @version 0.1.0
- * @date 2022-05-07
- * 
+ * @version 1.1.0
+ * @date 2022-06-04
  * @copyright Copyright (c) 2022
- * 
+ * @note Leave _LOOPBACK__ commented in to do loopback mode. Leave __USER_ONE__
+ * commented in to transmit can_id = 0x0. Comment __USER_ONE__ out to transmit
+ * can_id = 0x01.
  */
-#include <stdbool.h>
 #include "mbed.h"
 
-#define __LOOPBACK__ 0
+#define PCB_MAJOR_VERSION   3
+#define PCB_MINOR_VERSION   3
+#define PCB_PATCH_VERSION   1
+#define BLINKING_RATE       500ms
+// #define __LOOPBACK__        0
+#define __USER_ONE__        0
 
 
-#ifdef __LOOPBACK__
 Ticker ticker;
-CAN can(D10, D2);
+CAN can(D10, D2);           // D2 (TX), D10 (RX)
+DigitalOut led(D13);        // STM32 Onboard LED
 char counter = 0;
 bool flag = false;
 
-/** Tell the main thread to send a message. */
+/**
+ * @brief Tell the main thread to send a message and toggle the LED.
+ */
 void send() {
+    led = !led;
     if (!flag) {
         flag = true;
     }
 }
 
-/** This test sets up the CAN driver on the Nucleo and attempts to communicate with itself. */
+/**
+ * @brief Communicate with itself or another PCB via CAN.
+ * 
+ * @return int 
+ */
 int main() {
     ticker.attach(&send, 1000us);
     CANMessage msg;
-    can.mode(CAN::LocalTest);
-    
-    while (true) {
-        if (flag) {
-            flag = false;
-            if (can.write(CANMessage(1337, &counter, 1))) {
-                counter++;
-                printf("Message sent: %d\n", counter);
-            } else {
-                printf("Message not sent: %d\n", counter);
-            }
-        }
 
-        if (can.read(msg)) {
-            printf("Message received: %d\n", msg.data[0]);
-        } else {
-            printf("No message.\n");
-            ThisThread::sleep_for(200ms);
-        }
-    }
-}
-#else
-#define MODE 0
-#if MODE == 0
-const uint32_t CAN_ID = 0x01;
-#elif MODE == 1
-const uint32_t CAN_ID = 0x00;
+#ifdef __LOOPBACK__
+    can.mode(CAN::LocalTest);
 #endif
 
-Ticker ticker;
-CAN can(D10, D2);
-char counter = 0;
-bool flag = false;
+#ifdef __USER_ONE__
+    const uint32_t can_id = 0x00;
+#else
+    const uint32_t can_id = 0x01;
+#endif
 
-/** Tell the main thread to send a message. */
-void send() {
-    if (!flag) {
-        flag = true;
-    }
-}
-
-/** This test sets up the CAN driver on the Nucleo and attempts to communicate with another device. */
-int main() {
-    printf("main()\n");
-    ticker.attach(&send, 1);
-    CANMessage msg;
-    
     while (true) {
         if (flag) {
             flag = false;
-            if (can.write(CANMessage(CAN_ID, &counter, 1))) {
-                counter++;
-                printf("Message sent: %d\n", counter);
+            if (can.write(CANMessage(can_id, &counter, 1))) {
+                ++counter;
+                printf("User %i sent message: %d\n", can_id, counter);
             } else {
-                printf("Message not sent: %d\n", counter);
+                printf("No message sent.\n");
             }
         }
 
         if (can.read(msg)) {
             printf("Message received from %i: %d\n", msg.id, msg.data[0]);
         } else {
-            printf("No message.\n");
-            ThisThread::sleep_for(200);
+            printf("No message received.\n");
+            ThisThread::sleep_for(200ms);
         }
     }
+
+    return 0;
 }
-#undef MODE
-#endif

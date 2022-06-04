@@ -3,38 +3,131 @@
  * @author Matthew Yu (matthewjkyu@gmail.com) and Roy Mor (roymor.102@gmail.com)
  * @brief Test main that implements a primitive voltage sweep MPPT algorithm to
  *        drive the v3.3.x MPPTs.
- * @version 0.1.0
+ * @version 1.1.0
  * @date 2022-06-04
  * 
  * @copyright Copyright (c) 2022
- * 
+ * @note Set __MODE__ based on optimizer criteria. Set PCB versioning for
+ * correct analog pinout and mapping. Set PWM_FREQ and SWEEP_ITER_DELAY for
+ * voltage sweep characteristics.
  */
 
 #include "mbed.h"
 
+#define PCB_MAJOR_VERSION   3
+#define PCB_MINOR_VERSION   3
+#define PCB_PATCH_VERSION   0
+#define BLINKING_RATE       500ms
 #define __OPTIMIZE_POWER__  0
 #define __OPTIMIZE_EFF__    1
 #define __MODE__            __OPTIMIZE_POWER__
-
 #define PWM_FREQ            21000
 #define PWM_PERIOD          1000000 / PWM_FREQ
 #define SWEEP_ITER_DELAY    50ms
 #define POW_THRESHOLD       1 // in watts
 
 static Ticker       tickSweepEvent;
-static AnalogIn     array_voltage(A3);
-static AnalogIn     array_current(A4);
-static AnalogIn     battery_voltage(A6);
-static AnalogIn     battery_current(A5);
-static DigitalOut   led1(D1);
-static DigitalOut   led2(D0);
-static PwmOut       pwm(A1);
+#if PCB_MAJOR_VERSION == 3 && PCB_MINOR_VERSION == 2
+    DigitalOut led(D13);    // STM32 Onboard LED
+    AnalogIn   battery_i_sense(A3);
+    AnalogIn   battery_v_sense(A4);
+    AnalogIn   array_i_sense(A5);
+    AnalogIn   array_v_sense(A6);
+    PwmOut     pwm(A1);
+
+    float arr_v_cal(float inp) {
+        float out = inp;
+        return out;
+    }
+
+    float arr_i_cal(float inp) {
+        float out = inp;
+        return out;
+    }
+
+    float bat_v_cal(float inp) {
+        float out = inp;
+        return out;
+    }
+
+    float bat_i_cal(float inp) {
+        float out = inp;
+        return out;
+    }
+
+#elif PCB_MINOR_VERSION == 3 && PCB_MINOR_VERSION == 3 && PCB_PATCH_VERSION == 0
+    DigitalOut led(D13);    // STM32 Onboard LED
+    AnalogIn   battery_i_sense(A3);
+    AnalogIn   battery_v_sense(A4);
+    AnalogIn   array_v_sense(A5);
+    AnalogIn   array_i_sense(A6);
+    PwmOut     pwm(A1);
+
+    float arr_v_cal(float inp) {
+        float out = inp * 114.108 + 0.006;
+        return out;
+    }
+
+    float arr_i_cal(float inp) {
+        float out = inp * 8.114754;
+        return out;
+    }
+
+    float bat_v_cal(float inp) {
+        float out = inp * 168.97 + 0.067;
+        return out;
+    }
+
+    float bat_i_cal(float inp) {
+        float out = inp * 8.247;
+        return out;
+    }
+
+#elif PCB_MINOR_VERSION == 3 && PCB_MINOR_VERSION == 3 && PCB_PATCH_VERSION == 1
+    DigitalOut led(D13);    // STM32 Onboard LED
+    AnalogIn   array_v_sense(A3);
+    AnalogIn   array_i_sense(A4);
+    AnalogIn   battery_i_sense(A5);
+    AnalogIn   battery_v_sense(A6);
+    PwmOut     pwm(A1);
+
+    float arr_v_cal(float inp) {
+        float out = inp;
+        return out;
+    }
+
+    float arr_i_cal(float inp) {
+        float out = inp;
+        return out;
+    }
+
+    float bat_v_cal(float inp) {
+        float out = inp;
+        return out;
+    }
+
+    float bat_i_cal(float inp) {
+        float out = inp;
+        return out;
+    }
+
+#endif
 
 static bool start_sweep = false;
+
+/**
+ * @brief Set the sweep event trigger.
+ */
 void set_sweep_event(void) {
     start_sweep = true;
 }
 
+/**
+ * @brief Periodically sweep the array I-V curve, and picking an operating point
+ * at either max power transfer or max efficiency.
+ * 
+ * @return int 
+ */
 int main() {
     printf("HI\n\r");
     /* Initiate a voltage sweep at 20% duty cycle. */
@@ -48,10 +141,10 @@ int main() {
     float best_power_ratio = 0.0;
 
     while (true) {
-        float arr_voltage = array_voltage.read() * 114.108 + 0.006;
-        float arr_current = array_current.read() * 8.114754;
-        float batt_voltage = battery_voltage.read() * 168.97 + 0.067;
-        float batt_current = battery_current.read() * 8.247;
+        float arr_voltage = arr_v_cal(array_v_sense.read());
+        float arr_current = arr_i_cal(array_i_sense.read());
+        float batt_voltage = bat_v_cal(battery_v_sense.read());
+        float batt_current = bat_i_cal(battery_i_sense.read());
 
         if (start_sweep) {
             start_sweep = false;
@@ -62,10 +155,10 @@ int main() {
             for (float duty_cycle = 0.025; duty_cycle <= 0.975; duty_cycle += 0.025) {
                 pwm.pulsewidth_us((1-duty_cycle) * PWM_PERIOD);
                 ThisThread::sleep_for(SWEEP_ITER_DELAY);
-                arr_voltage = array_voltage.read() * 114.108 + 0.006;
-                arr_current = array_current.read() * 8.114754; 
-                batt_voltage = battery_voltage.read() * 168.97 + 0.067;
-                batt_current = battery_current.read() * 8.247;
+                arr_voltage = arr_v_cal(array_v_sense.read());
+                arr_current = arr_i_cal(array_i_sense.read());
+                batt_voltage = bat_v_cal(battery_v_sense.read());
+                batt_current = bat_i_cal(battery_i_sense.read());
                 printf("DUTY: %f, INP: %f, %f %f, OUT: %f, %f, %f, Eff: %f\n\r", 
                     duty_cycle,
                     arr_voltage,

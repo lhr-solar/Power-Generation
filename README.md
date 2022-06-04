@@ -58,3 +58,6 @@ detailed analysis of the PV being characterized.
 The former functionality is used for simulating and testing novel MPPT
 algorithms and the latter is used for binning and evaluating photovoltaic cells
 and their assembled modules and arrays.
+
+### Sunspot
+Sunspot is a laminator PCB and accompanying FW used to laminate the solar cells.
