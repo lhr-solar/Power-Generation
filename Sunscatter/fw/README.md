@@ -1,51 +1,81 @@
 # Sunscatter Firmware
 
-## Maintainer
+This repository contains all relevant firmware and documentation files for the
+Sunscatter MPPT FW.
 
-- Matthew Yu
+A couple other important sections for programmers who are working with this
+board are below. 
 
-## Prerequisites
+- [Repository Structure](#Repository-Structure)
+- [Maintainers](#Maintainers)
+- [Versioning](#Versioning)
+- [Changes and Errata](#Changes-and-Errata)
+- [List of TODOs](#TODO)
 
-When first initializing this repo, please make sure the `mbed-os` library is in
-`lib`. The current version is `6.15.1`. [Mbed
-Studio](https://os.mbed.com/studio/) should also be installed.
+---
 
-## Building
+## Repository Structure
+- **inc**: Includes additional files and libraries made by external sources,
+  like MBED from ARM.
+- **lib**: Includes additional files and libraries developed by internal sources.
+- **src**: Includes all projects, including test programs. The main program is
+  typicalnamed after the root directory name. E.g. Sunscatter.
+- **documentation**: Contains documentation for building, flashing, testing, and
+  characterizing the HW.
+  - [IMPROVEMENT.md](documentation/IMPROVEMENT.md): Suggestions for improving
+    the software, libraries, and/or tests.
+  - [BUILDING.md](documentation/BUILDING.md): Instructions for installing all
+    prerequisites and building the program. Also how to flash onto the board.
+  - [TESTING.md](documentation/TESTING.md): Instructions for testing the board
+    hardware (past the basic electrical tests found in
+    pcb/documentation/ASSEMBLY_AND_TESTING.md) and characterizing the hardware. 
 
-When building this project, switch the open workspace to `src`. Mbed Studio will
-not recognize that the projects exist without the program folder being at the
-root of the workspace.
+---
 
-The appropriate target is the `NUCLEO-L432KC`. This is autopopulated if the
-nucleo is plugged into the PC via a USB cable. On the first build, the compile
-time will take a while.
+## Maintainers
 
-An `mbed_app.json` can be added to the program folder. Additional options can be
-specified, such as the UART baud rate or the printf precision. See the provided
-`mbed_app.json` file in the src subfolders for details.
+The current maintainer of this project is Matthew Yu as of 07/15/2022. His email
+is [matthewjkyu@gmail.com](matthewjkyu@gmail.com). 
 
-## Viewing UART/virtual COM serial output
+Also a useful point of contact is Professor Gary Hallock, who advised Matthew
+and worked with the several former senior design teams and solar car class
+groups who developed this board.
 
-Assuming the HW has the correct UART peripheral pins available to talk via the
-USB-UART chip, Mbed Studio has a built in serial monitor for viewing any debug
-output.
+Other contributors of this FW are as follows:
+- Afnan Mir (v0.1.0)
+- Roy Moore (v0.1.0)
+- Gary Hallock (v0.1.0)
+- And many others...
 
-It is preferred to use PuTTy or a custom serial viewer, however, since the
-serial monitor in Mbed Studio may time out after a certain amount of lines.
+---
 
-## Tests
+## Versioning
 
-In addition to the main, defined in `src/MPPT`, several test and
-characterization programs have been created. They are noted briefly here.
+Each FW program has an internal version number located at the header. The
+current FW version of the main program, `MPPT` is `0.1.0`. It is still in beta.
+We use [semantic versioning](https://semver.org/) to denote between versions.
 
-- **Indicator Test**: tests LEDs on Sunscatter PCB.
-- **CAN Test**: tests CAN peripheral and HW on Sunscatter PCB.
-- **Sensor Test**: tests sensor HW and sensor calibration on Sunscatter PCB.
-- **Step Response Test**: characterizes the transients for voltage and current
-  across the DC-DC converter on the Sunscatter PCB.
-- **(*UNDER CONSTRUCTION*)** **Boost Characterization Test**: Characterizes unloaded
-  and loaded boost parameters of the DC-DC converter.
-- **(*USE FOR ARRAY TESTING*)** **Voltage Sweep MPPT Test**: sweeps across the input
-  source and sets a reference 
-  at the PWM duty cycle that maximizes either efficiency or power transmission.
-- **(*UNDER CONSTRUCTION*)** **MPPT**: main program for the Sunscatter PCB.
+---
+
+## Changes and Errata
+
+### Release 0.1.0
+
+- Initial formatting of the repository structure
+- Added the following tests:
+  - boost_characterization_test
+  - can_test
+  - indicator_test
+  - sensor_test
+  - step_response_test
+  - voltage_sweep_mppt_test
+- Added main program Sunscatter.
+- Versioning for each test based on hardware revision.
+
+---
+
+## TODO
+- [#1. Figure out switching node requirements on overshoot and ringing.](https://github.com/lhr-solar/Power-Generation/issues/1) 
+- Add libraries for Sunscatter program.
+- Update Sunscatter program to use on MPPT.
+- Clean up Boost Characterization Test.
