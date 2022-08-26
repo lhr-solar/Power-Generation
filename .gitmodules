@@ -7,3 +7,6 @@
 [submodule "Curve_Tracer/pcb"]
 	path = Curve_Tracer/pcb
 	url = https://github.com/lhr-solar/Power-Generation-Curve-Tracer-PCB.git
+[submodule "Modules"]
+	path = Modules
+	url = https://github.com/lhr-solar/Power-Generation-Solar-Module-PCBs.git
