@@ -154,42 +154,6 @@ def visualize_pvs(pvs):
 
         return (sc, update_annot, annot)
 
-    def visualize_ff(pvs, ax):
-        sc_x = []
-        sc_y = []
-        names = []
-
-        for (pv_id, pv_data) in pvs.items():
-            sc_x.append(pv_data["sc_ranking"])
-            sc_y.append(pv_data["i_sc"])
-            names.append(pv_id)
-
-        sc = ax.scatter(sc_x, sc_y, s=10)
-        ax.set_xlabel("Ranking")
-        ax.set_ylabel("I_SC (A)")
-        ax.set_title("PV Ranking by I_SC")
-        ax.grid(True)
-
-        # Setup annotation
-        annot = ax.annotate(
-            "",
-            xy=(0, 0),
-            xytext=(20, 20),
-            textcoords="offset points",
-            bbox=dict(boxstyle="round", fc="w"),
-            arrowprops=dict(arrowstyle="->"),
-        )
-        annot.set_visible(False)
-
-        def update_annot(ind):
-            pos = sc.get_offsets()[ind["ind"][0]]
-            annot.xy = pos
-            text = "{}".format(" ".join([names[n] for n in ind["ind"]]))
-            annot.set_text(text)
-            annot.get_bbox_patch().set_alpha(0.4)
-
-        return (sc, update_annot, annot)
-
     fig, axs = plt.subplots(2, 3)
     (scatter_sc, annot_func_sc, annot_sc) = visualize(
         pvs,
@@ -221,7 +185,7 @@ def visualize_pvs(pvs):
         ],
     )
     (scatter_bin, annot_func_bin, annot_bin) = visualize(
-        pvs, axs[1][2], ["binning", "i_sc", "Bin Value", "I_SC (A)", "Proposed Binning"]
+        pvs, axs[1][2], ["ff", "i_sc", "FF (%)", "I_SC (A)", "Proposed Binning"]
     )
 
     axes = [axs[0][0], axs[0][1], axs[0][2], axs[1][0], axs[1][1], axs[1][2]]
