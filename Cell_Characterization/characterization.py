@@ -6,6 +6,7 @@
 @date       2022-10-04
 """
 
+import itertools
 import os
 import sys
 
@@ -78,11 +79,11 @@ def characterize_pv(file_name, path):
         pvs[pv_id]["ff"] = pvs[pv_id]["p_mpp"] / pvs[pv_id]["p_max"]
     except:
         print(f"{file_name} divide by 0 error.")
-    pvs[pv_id]["points"] = None
+    # pvs[pv_id]["points"] = None
     # print(pvs)
 
 
-def rank_pvs(pvs, bin_size):
+def rank_pvs(pvs):
     sorted_pvs = [[pv_id, pv_data] for [pv_id, pv_data] in pvs.items()]
 
     sorted_pvs = sorted(sorted_pvs, key=lambda pv: pv[1]["ff"])
@@ -108,9 +109,41 @@ def rank_pvs(pvs, bin_size):
     for [percentile, pv] in zip(percentiles, pvs.values()):
         pv["percentile"] = percentile
 
-    # TODO: Generate binning based on bin size
-    for [pv_id, pv] in pvs.items():
-        pvs[pv_id]["binning"] = 0
+
+def bin_pvs(pvs, bin_size=2, starting_step_size=0.1, iterations=100):
+    set = sorted(list(pvs.keys()))
+    bins = list()
+
+    # Repeat until set is empty.
+    while len(set) >= bin_size:
+        # Get all possible subsets of bin_size to test.
+        subsets = list(itertools.combinations(set, bin_size))
+
+        for subset in subsets:
+            # Get the PV data for each key in the subset.
+            data = [(key, pvs[key]) for key in subset]
+
+            # Solve for v1, v2, ... vn s.t.
+            # 1. V_tot = sum_i_n(V_i_mpp) = sum_i(V_i)
+            # 2. I_tot = I_n for all n
+            # 3. V_i is in range [0, V_oc]
+            # 4. I_i is in range [0, I_sc]
+            # Optimizing for either
+            # a. min(1/n * sum_i_n(|V_i_mpp - V_i|))
+            # b. max(sum_i_n(V_i * I_i))
+            seeds = [datapoint[1]["v_mpp"] for datapoint in data]
+            print(seeds)
+
+            v_tot = sum(seeds)
+            print(v_tot)
+            # Brute force: TODO: generate brute force candidates from viable
+            # cell ranges in the subset
+
+            # Random sampling:
+
+            # Simulated Annealing
+
+            sys.exit(0)
 
 
 def visualize_pvs(pvs):
@@ -185,7 +218,7 @@ def visualize_pvs(pvs):
         ],
     )
     (scatter_bin, annot_func_bin, annot_bin) = visualize(
-        pvs, axs[1][2], ["ff", "i_sc", "FF (%)", "I_SC (A)", "Proposed Binning"]
+        pvs, axs[1][2], ["ff", "i_sc", "FF (%)", "I_SC (A)", "I_SC VS FF"]
     )
 
     axes = [axs[0][0], axs[0][1], axs[0][2], axs[1][0], axs[1][1], axs[1][2]]
@@ -236,16 +269,21 @@ if __name__ == "__main__":
         raise Exception("This program only supports Python 3.")
 
     # Get PV data directory.
-    path = "./cell_data/"
+    path = "./cell_data/RP/"
     dir_list = os.listdir(path)
     print("Characterizing PVs...")
     for file_name in dir_list:
-        characterize_pv(file_name, path)
+        if os.path.splitext(file_name)[1] == ".log":
+            characterize_pv(file_name, path)
     print("Done characterizing PVs.")
 
     print("Ranking PVs...")
-    rank_pvs(pvs, 2)
+    rank_pvs(pvs)
     print("Done ranking PVs.")
+
+    # print("Binning PVs...")
+    # bin_pvs(pvs, 2)
+    # print("Done binning PVs.")
 
     print("Visualizing PVs...")
     visualize_pvs(pvs)
