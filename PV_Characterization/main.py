@@ -43,7 +43,9 @@ def visualize_cells(cells):
 
         ax.plot(points_filtered[0], points_filtered[1], c="r")
         ax2.plot(
-            points_filtered[0], points_filtered[0] * points_filtered[1], c="r",
+            points_filtered[0],
+            points_filtered[0] * points_filtered[1],
+            c="r",
         )
 
     ax.set_xlabel("Voltage (V)")
