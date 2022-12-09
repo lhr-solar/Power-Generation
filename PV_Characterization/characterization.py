@@ -12,14 +12,13 @@ import random
 import sys
 
 import matplotlib.pyplot as plt
+import models.nonideal_cell.c.nonideal_model as model
 import numpy as np
 import tqdm
 from lmfit import Parameters as lmfit_parameters
 from lmfit import minimize as lmfit_minimize
 from scipy.interpolate import interp1d as scipy_interp1d
 from scipy.stats import truncnorm as scipy_truncnorm
-
-import models.nonideal_cell.c.nonideal_model as model
 
 NUM_SAMPLES = 125
 BOUNDS_GUARD = 0.0005
@@ -276,9 +275,7 @@ def generate_characterization(cell, cell_idx=0):
     )
 
     # Prune all fit points that have negative values.
-    points_filtered = sorted(
-        [[x, y] for x, y in points_fit if y >= BOUNDS_GUARD and x >= 0]
-    )
+    points_filtered = sorted([[x, y] for x, y in points_fit if y >= 0.005 and x >= 0])
 
     v_oc = 0.0
     i_sc = 0.0

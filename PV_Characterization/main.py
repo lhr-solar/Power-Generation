@@ -6,6 +6,7 @@
 @date       2022-12-08
 @TODO:      - report cells with bad fit
 @TODO:      - report cells with bad r_s, r_sh
+@TODO       - faster plotting using blitting, then pyqtgraph
 """
 
 import argparse
@@ -20,11 +21,10 @@ import numpy as np
 import p_tqdm
 import pandas as pd
 import plottable
-from scipy.cluster.hierarchy import dendrogram
-
 from characterization import generate_characterization, save_characterization
 from clustering import generate_clusters, save_clusters
 from matching import generate_matches, save_matches
+from scipy.cluster.hierarchy import dendrogram
 
 fig = plt.figure()
 
@@ -151,9 +151,122 @@ def visualize_matches(matches, cells):
     )
 
 
-def multiprocess_generate_characterization(cell_idx, cell, use_cached):
+def generate_report(path, cells, clusters, matches):
+    with open(f"{path}report.md", "w") as f:
+
+        def out(str):
+            f.write(str + "\n")
+            print(str)
+
+        out(f"# Characterization Report")
+        out(f"\n## Characterization\n")
+        out(f"Characterized {len(cells)} cells from the {path} folder.")
+
+        median = np.median([cell["fit_err"] for cell in cells.values()])
+        threshold_fit_err = 0.25
+        outliers = [
+            cell for cell in cells.values() if cell["fit_err"] > threshold_fit_err
+        ]
+
+        out(
+            f"The median fit parameter is {median} with {len(outliers)} beyond {threshold_fit_err}."
+        )
+        if len(outliers) > 0:
+            out(f"The outlier cells are:\n")
+            for outlier in outliers:
+                out(f"- {outlier['file_name']} with fit error {outlier['fit_err']}")
+            out(
+                f"It is suggested to retest, rerun, or remove these cells from the dataset."
+            )
+
+        out(f"\n## Clustering\n")
+
+        median = np.median(
+            [cluster["variance"] for cluster in clusters.values()], axis=0
+        )
+        threshold_variance = 0.15
+        outliers = [
+            (cluster_idx, cluster)
+            for cluster_idx, cluster in clusters.items()
+            if np.var(cluster["variance"]) > threshold_variance
+        ]
+
+        out(
+            f"The characterized cells form {len(clusters)} clusters, with a median variance of {median} for each dimension."
+        )
+        out(
+            f"There are {len(outliers)} clusters with a variance beyond {threshold_variance}."
+        )
+        if len(outliers) > 0:
+            out(f"These relatively loose clusters are:\n")
+            for outlier in outliers:
+                out(
+                    f"- {outlier[0]} containing cells {[cells[cell_name]['file_name'] for cell_name in outlier[1]['cells']]}."
+                )
+                out(f"  - Centroid {outlier[1]['centroid']}")
+                out(f"  - Variance {outlier[1]['variance']}")
+                out(f"  - STD {outlier[1]['std']}")
+
+            out(f"Loose clusters may generate worse matchings.")
+
+        outliers = [
+            (cluster_idx, cluster)
+            for cluster_idx, cluster in clusters.items()
+            if len(cluster["cells"]) == 1
+        ]
+
+        out(f"There are {len(outliers)} clusters with only 1 member.")
+        if len(outliers) > 0:
+            out(f"These isolated clusters are:\n")
+            for outlier in outliers:
+                out(
+                    f"- {outlier[0]} containing cell {[cells[cell_name]['file_name'] for cell_name in outlier[1]['cells']]}."
+                )
+                out(f"  - Centroid {outlier[1]['centroid']}")
+
+            out(f"\nIsolated clusters will not be used for final matching.")
+
+        out(f"\n## Matching\n")
+
+        out(
+            f"The clusters generate {len(matches)} matches using the specified parameters."
+        )
+        out(f"The matches, ordered by match metric, are as follows:\n")
+        out(f"- metric used `{'power_opt_0'}`")
+        for match_idx, match in matches.items():
+            out(f"- rank {match_idx} match")
+            out(
+                f"  - cells {[cells[cell_name]['file_name'] for cell_name in match['cell_names']]}"
+            )
+            out(f"  - resulted in a metric of {match['match_metric']}")
+
+        """_summary_
+        Characterized [] cells from the [] folder.
+        The mean fit parameter is [] with [] outliers beyond [].
+        The outlier cells are:
+          - [] with fit error []
+          - ...
+        It is suggested to retest, rerun, or remove these cells from the
+        dataset.
+
+        The characterized cells form [] clusters, with a median variance of [],
+        [], [] for each dimension.
+
+        The clusters generated [] matches using the specified parameters. The
+        matches, ordered by match metric, are as follows:
+          - metric used []
+          - rank [] match
+            - cells
+              - []
+              - ...
+            - resulted in a metric of []
+          - ...
+        """
+
+
+def multiprocess_generate_characterization(cell_idx, cell, no_cache):
     # If characterization file already exists, load it and skip
-    if f"{cell['file_name']}.char" in dir_list and use_cached is True:
+    if f"{cell['file_name']}.char" in dir_list and not no_cache:
         with open(f"{path}{cell['file_name']}.char") as f:
             return cell_idx, json.load(f)
 
@@ -185,11 +298,10 @@ if __name__ == "__main__":
         description="Characterizes, clusters, and matches photovoltaic cells."
     )
     parser.add_argument("folder_path", help="Path to a set of .log PV files.")
-    parser.add_argument(
-        "--use_cached",
-        help="Use any cached .char files for each PV if any. Default True.",
-        type=bool,
-        default=True,
+    parser.add_argument(  # No cache is false: use the cache
+        "--no_cache",
+        help="Disable the use of cached files generated from previous runs if any. Cache is on by default.",
+        action="store_true",
     )
     parser.add_argument(
         "--num_cpus",
@@ -208,6 +320,12 @@ if __name__ == "__main__":
         help="The size of the match in number of cells. Default is 2.",
         type=int,
         default=2,
+    )
+    parser.add_argument(
+        "--report",
+        help="Spits out a post mortem CLI report about the procedures performed. Default True.",
+        type=bool,
+        default=True,
     )
 
     args = parser.parse_args()
@@ -237,7 +355,7 @@ if __name__ == "__main__":
         multiprocess_generate_characterization,
         [cell_idx for cell_idx in range(len(cells))],
         [cells[cell_idx] for cell_idx in range(len(cells))],
-        [args.use_cached] * len(cells),
+        [args.no_cache] * len(cells),
         total=len(cells),
         desc=f"Fitting file",
         leave=False,
@@ -264,7 +382,7 @@ if __name__ == "__main__":
     # Match cells.
     print("Matching Cells...")
     matches = {}
-    if f"matches.json" in dir_list and args.use_cached is True:
+    if f"matches.json" in dir_list and args.no_cache is False:
         with open(f"{path}matches.json") as f:
             matches = json.load(f)
     else:
@@ -286,11 +404,11 @@ if __name__ == "__main__":
             num_cpus=args.num_cpus,
         )
 
-        clusters = []
+        match_clusters = []
         for cluster_idx, matches in results:
-            clusters.append([cluster_idx, matches])
-        clusters = sorted(clusters)
-        for cluster_idx, all_matches in clusters:
+            match_clusters.append([cluster_idx, matches])
+        match_clusters = sorted(match_clusters)
+        for cluster_idx, all_matches in match_clusters:
             for match_idx, match in all_matches.items():
                 if len(matches) > args.max_matches:
                     break
@@ -303,11 +421,18 @@ if __name__ == "__main__":
         visualize_matches(matches, cells)
 
     print("End program. Displaying results.")
-    plt.show()
+
+    if args.report is True:
+        generate_report(path, cells, clusters, matches)
 
     for i in range(3):
-        time.sleep(0.2)
+        time.sleep(0.1)
         print("\a")
 
-    plt.savefig(f"{path}characterization.png", dpi=2000)
+    fig = plt.gcf()
+    fig.set_size_inches(15, 9, forward=True)
+    plt.tight_layout()
+    plt.savefig(f"{path}characterization.png", dpi=500)
+    plt.show()
+
     sys.exit(0)
