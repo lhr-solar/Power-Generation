@@ -66,7 +66,8 @@ def convert(file_name, file, new_file_type):
                 new_file.writelines(["SCAN MODE\n", "\n", "\n"])
                 new_file.write(f"{data[0][0]},{data[0][1]},{data[0][2]},{data[0][3]}\n")
                 for row in data[1:-1]:
-                    [gate, voltage, current] = row
+                    [current, voltage, gate] = row
+                    current *= 200
                     power = voltage * current
                     new_file.write(f"{gate},{voltage},{current},{power}\n")
             case _:
@@ -80,7 +81,7 @@ if __name__ == "__main__":
         raise Exception("This program only supports Python 3.")
 
     # Get PV data directory.
-    path = "./cell_data/"
+    path = "./cell_data/control/"
     dir_list = os.listdir(path)
     print(
         f"Converting PVs of file type {file_type_to_convert} in path {path} to type {file_type_to_convert_to}"

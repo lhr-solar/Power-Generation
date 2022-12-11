@@ -12,13 +12,14 @@ import random
 import sys
 
 import matplotlib.pyplot as plt
-import models.nonideal_cell.c.nonideal_model as model
 import numpy as np
 import tqdm
 from lmfit import Parameters as lmfit_parameters
 from lmfit import minimize as lmfit_minimize
 from scipy.interpolate import interp1d as scipy_interp1d
 from scipy.stats import truncnorm as scipy_truncnorm
+
+import models.nonideal_cell.c.nonideal_model as model
 
 NUM_SAMPLES = 125
 BOUNDS_GUARD = 0.0005
@@ -28,8 +29,7 @@ V_OC = 0.8
 V_RES = 100
 
 NUM_LARGE_ROUNDS = 8
-NUM_SMALL_ROUNDS = 50
-ACCEPTABLE_ERR = 0.08
+NUM_SMALL_ROUNDS = 75
 MAX_REPEATS = 5
 
 
@@ -55,7 +55,7 @@ def residual(params, v, data=None, eps=None):
     return error
 
 
-def generate_curve_fit(points, position_idx=0):
+def generate_curve_fit(points, fit_target=0.08, position_idx=0):
     points = np.transpose(points)
 
     def get_truncated_normal(mean, std, low, high):
@@ -189,7 +189,7 @@ def generate_curve_fit(points, position_idx=0):
                 prev_res = result.chisqr
                 repeat = 0
 
-            if result.chisqr <= ACCEPTABLE_ERR:
+            if result.chisqr <= fit_target:
                 break
 
         if best_result is None or best_result.chisqr > result.chisqr:
@@ -197,7 +197,7 @@ def generate_curve_fit(points, position_idx=0):
             best_result = result
 
         # Early exit.
-        if best_result.chisqr <= ACCEPTABLE_ERR:
+        if best_result.chisqr <= fit_target:
             break
 
     res = [
@@ -209,7 +209,7 @@ def generate_curve_fit(points, position_idx=0):
     return res, best_result.chisqr
 
 
-def generate_characterization(cell, cell_idx=0):
+def generate_characterization(cell, fit_target=0.08, cell_idx=0):
     # Get the cell data from the file.
     data = {}
     with open(cell["file_path"], encoding="utf-8") as f:
@@ -264,7 +264,7 @@ def generate_characterization(cell, cell_idx=0):
     points_interp = sorted(points_interp)
 
     # Generate popts associated with the I-V curve fit.
-    p_opt, best_fit_err = generate_curve_fit(points_interp, cell_idx)
+    p_opt, best_fit_err = generate_curve_fit(points_interp, fit_target, cell_idx)
 
     # Generate the curve from the p_opts.
     points_fit = sorted(
@@ -322,8 +322,8 @@ if __name__ == "__main__":
         pass  # no need to fail because of missing dev dependency
 
     cells = {
-        0: {"file_path": "./cell_data/training/RP_control_8_27_22.log"},
-        1: {"file_path": "./cell_data/training/RP_TEST1_3_2022-10-01_11-04-26.log"},
+        0: {"file_path": "./cell_data/RP/RP_1_8_27_22.log"},
+        1: {"file_path": "./cell_data/control/RP_TEST1_3_2022-10-01_11-04-26.log"},
     }
 
     for cell_idx, cell in cells.items():

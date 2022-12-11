@@ -4,7 +4,6 @@
 @brief      Characterizes, clusters, and matches all cells in a given folder.
 @version    0.0.0
 @date       2022-12-08
-@TODO:      - report cells with bad fit
 @TODO:      - report cells with bad r_s, r_sh
 @TODO       - faster plotting using blitting, then pyqtgraph
 """
@@ -14,17 +13,17 @@ import json
 import multiprocessing
 import os
 import sys
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 import p_tqdm
 import pandas as pd
 import plottable
+from scipy.cluster.hierarchy import dendrogram
+
 from characterization import generate_characterization, save_characterization
 from clustering import generate_clusters, save_clusters
 from matching import generate_matches, save_matches
-from scipy.cluster.hierarchy import dendrogram
 
 fig = plt.figure()
 
@@ -58,7 +57,9 @@ def visualize_cells(cells):
     ax2.grid(True)
 
 
-def visualize_clusters(clusters, variance_threshold, head, cluster_steps):
+def visualize_clusters(
+    clusters, variance_threshold, head, cluster_steps, plot_cluster_zoomed_out
+):
     # Plot dendrogram.
     def fancy_dendrogram(*args, **kwargs):
         max_d = kwargs.pop("max_d", None)
@@ -93,11 +94,21 @@ def visualize_clusters(clusters, variance_threshold, head, cluster_steps):
     for cluster in clusters.values():
         centroids.append(cluster["centroid"])
         colorings = [
-            ax["leaves_color_list"][ax["ivl"].index(cell_name)]
-            for cell_name in cluster["cells"]
+            ax["leaves_color_list"][ax["ivl"].index(int(cell_name))]
+            for cell_name in cluster["cells"].keys()
         ]
         ax2.scatter(*np.transpose(cluster["vectors"]), c=colorings, s=8, alpha=0.7)
     ax2.scatter(*np.transpose(centroids), s=15, c="r", alpha=1)
+    if plot_cluster_zoomed_out:
+        ax2.set_xlim(
+            left=0.0,
+        )
+        ax2.set_ylim(
+            bottom=0.0,
+        )
+        ax2.set_zlim(
+            0.0,
+        )
     ax2.set_xlabel("V_OC (V)")
     ax2.set_ylabel("I_SC (A)")
     ax2.set_zlabel("FF")
@@ -136,8 +147,8 @@ def visualize_matches(matches, cells):
             header.extend([f"Cell {i}" for i in range(len(match["cell_names"]))])
         match_table.append(
             [
-                f"{' '.join(cells[cell_name]['file_name'].split('_')[:2])}"
-                for cell_name in match["cell_names"]
+                f"{' '.join(cells[int(cell_name)]['file_name'].split('_')[:2])}"
+                for cell_name in match["cell_names"].keys()
             ]
         )
 
@@ -151,7 +162,9 @@ def visualize_matches(matches, cells):
     )
 
 
-def generate_report(path, cells, clusters, matches):
+def generate_report(
+    path, cells, clusters, matches, threshold_fit_err, threshold_variance
+):
     with open(f"{path}report.md", "w") as f:
 
         def out(str):
@@ -163,7 +176,6 @@ def generate_report(path, cells, clusters, matches):
         out(f"Characterized {len(cells)} cells from the {path} folder.")
 
         median = np.median([cell["fit_err"] for cell in cells.values()])
-        threshold_fit_err = 0.25
         outliers = [
             cell for cell in cells.values() if cell["fit_err"] > threshold_fit_err
         ]
@@ -184,7 +196,6 @@ def generate_report(path, cells, clusters, matches):
         median = np.median(
             [cluster["variance"] for cluster in clusters.values()], axis=0
         )
-        threshold_variance = 0.15
         outliers = [
             (cluster_idx, cluster)
             for cluster_idx, cluster in clusters.items()
@@ -201,7 +212,7 @@ def generate_report(path, cells, clusters, matches):
             out(f"These relatively loose clusters are:\n")
             for outlier in outliers:
                 out(
-                    f"- {outlier[0]} containing cells {[cells[cell_name]['file_name'] for cell_name in outlier[1]['cells']]}."
+                    f"- {outlier[0]} containing cells {[cells[int(cell_name)]['file_name'] for cell_name in outlier[1]['cells']]}."
                 )
                 out(f"  - Centroid {outlier[1]['centroid']}")
                 out(f"  - Variance {outlier[1]['variance']}")
@@ -220,7 +231,7 @@ def generate_report(path, cells, clusters, matches):
             out(f"These isolated clusters are:\n")
             for outlier in outliers:
                 out(
-                    f"- {outlier[0]} containing cell {[cells[cell_name]['file_name'] for cell_name in outlier[1]['cells']]}."
+                    f"- {outlier[0]} containing cell {[cells[int(cell_name)]['file_name'] for cell_name in outlier[1]['cells']]}."
                 )
                 out(f"  - Centroid {outlier[1]['centroid']}")
 
@@ -236,7 +247,7 @@ def generate_report(path, cells, clusters, matches):
         for match_idx, match in matches.items():
             out(f"- rank {match_idx} match")
             out(
-                f"  - cells {[cells[cell_name]['file_name'] for cell_name in match['cell_names']]}"
+                f"  - cells {[cells[int(cell_name)]['file_name'] for cell_name in match['cell_names']]}"
             )
             out(f"  - resulted in a metric of {match['match_metric']}")
 
@@ -264,17 +275,42 @@ def generate_report(path, cells, clusters, matches):
         """
 
 
-def multiprocess_generate_characterization(cell_idx, cell, no_cache):
+def multiprocess_generate_characterization(
+    cell_idx, cell, no_cache, improve_cell_cache, fit_target
+):
     # If characterization file already exists, load it and skip
-    if f"{cell['file_name']}.char" in dir_list and not no_cache:
+    if no_cache:
+        save_cell = False
+        replace_cell = False
+        # Generate cell data from scratch.
+        if improve_cell_cache and f"{cell['file_name']}.char" in dir_list:
+            # Replace existing cell data if better.
+            with open(f"{path}{cell['file_name']}.char") as f:
+                cell_cache = json.load(f)
+            if cell_cache["fit_err"] <= fit_target:
+                replace_cell = True
+            else:
+                # Only run the characterization if we're not already at our
+                # target.
+                cell = generate_characterization(cell, fit_target, cell_idx)
+                if cell["fit_err"] < cell_cache["fit_err"]:
+                    save_cell = True
+                else:
+                    replace_cell = True
+        else:
+            cell = generate_characterization(cell, fit_target, cell_idx)
+            save_cell = True
+
+        if replace_cell:
+            cell = cell_cache
+        if save_cell:
+            save_characterization(path, cell)
+
+        return cell_idx, cell
+    else:
+        # Use existing cell data.
         with open(f"{path}{cell['file_name']}.char") as f:
             return cell_idx, json.load(f)
-
-    # Else, characterize it.
-    else:
-        cell = generate_characterization(cell, cell_idx)
-        save_characterization(path, cell)
-        return cell_idx, cell
 
 
 def multiprocess_generate_matching(cluster_idx, cluster_cells, match_size):
@@ -304,6 +340,11 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
+        "--improve_cell_cache",
+        help="If the current cell characterization is better then the cache, replace it. Pairs with --no_cache.",
+        action="store_true",
+    )
+    parser.add_argument(
         "--num_cpus",
         help="Set the number of CPUs to parallelize the work. Default is the max number of system CPUs.",
         type=int,
@@ -322,10 +363,32 @@ if __name__ == "__main__":
         default=2,
     )
     parser.add_argument(
-        "--report",
-        help="Spits out a post mortem CLI report about the procedures performed. Default True.",
-        type=bool,
-        default=True,
+        "--fit_target",
+        help="Target fit error for cell characterization. Default is 0.08.",
+        type=float,
+        default=0.08,
+    )
+    parser.add_argument(
+        "--threshold_variance",
+        help="The variance threshold by which to delineate clusters. Default is 0.2.",
+        type=float,
+        default=0.2,
+    )
+    parser.add_argument(
+        "--no_report",
+        help="Disables report generation. Report is generated by default.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--full_plot",
+        help="Plots the clusters zoomed out. Default disabled.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--filter_ff",
+        help="Value to filter out cells by FF. Default 0.0.",
+        type=float,
+        default=0.0,
     )
 
     args = parser.parse_args()
@@ -344,7 +407,7 @@ if __name__ == "__main__":
     # Characterize each cell curve.
     print("Characterizing Cells...")
     cells = {}
-    for file_name in dir_list:
+    for file_name in sorted(dir_list):
         if os.path.splitext(file_name)[1] == ".log":
             cells[len(cells)] = {
                 "file_name": os.path.splitext(file_name)[0],
@@ -356,28 +419,44 @@ if __name__ == "__main__":
         [cell_idx for cell_idx in range(len(cells))],
         [cells[cell_idx] for cell_idx in range(len(cells))],
         [args.no_cache] * len(cells),
+        [args.improve_cell_cache] * len(cells),
+        [args.fit_target] * len(cells),
         total=len(cells),
         desc=f"Fitting file",
         leave=False,
         position=0,
         num_cpus=args.num_cpus,
     )
-
     for cell_idx, cell in results:
         cells[cell_idx] = cell
 
+    # Filter cells.
+    cells = {
+        cell_idx: cell_data
+        for cell_idx, cell_data in cells.items()
+        if (cell_data["v_mpp"] * cell_data["i_mpp"])
+        / (cell_data["v_oc"] * cell_data["i_sc"])
+        > args.filter_ff
+    }
+
+    os.system("cls||clear")
     print("Visualizing Cells...")
     visualize_cells(cells)
 
     # Cluster cells.
     print("Clustering Cells...")
     clusters, variance_threshold, head, cluster_steps = generate_clusters(
-        cells, "v_oc_i_sc_v_mpp_0", debug=True
+        cells,
+        "v_oc_i_sc_v_mpp_0",
+        debug=True,
+        variance_threshold=args.threshold_variance,
     )
     save_clusters(path, clusters)
 
     print("Visualizing Clusters...")
-    visualize_clusters(clusters, variance_threshold, head, cluster_steps)
+    visualize_clusters(
+        clusters, variance_threshold, head, cluster_steps, args.full_plot
+    )
 
     # Match cells.
     print("Matching Cells...")
@@ -405,29 +484,30 @@ if __name__ == "__main__":
         )
 
         match_clusters = []
-        for cluster_idx, matches in results:
-            match_clusters.append([cluster_idx, matches])
+        for cluster_idx, cluster_matches in results:
+            match_clusters.append([cluster_idx, cluster_matches])
         match_clusters = sorted(match_clusters)
         for cluster_idx, all_matches in match_clusters:
             for match_idx, match in all_matches.items():
-                if len(matches) > args.max_matches:
+                if len(matches) >= args.max_matches:
                     break
                 matches[match_idx] = match
 
         save_matches(path, matches)
 
+    os.system("cls||clear")
     print("Visualizing Matches...")
     if len(matches) > 0:
         visualize_matches(matches, cells)
 
     print("End program. Displaying results.")
 
-    if args.report is True:
-        generate_report(path, cells, clusters, matches)
+    if args.no_report is False:
+        generate_report(
+            path, cells, clusters, matches, args.fit_target, args.threshold_variance
+        )
 
-    for i in range(3):
-        time.sleep(0.1)
-        print("\a")
+    print("\a")
 
     fig = plt.gcf()
     fig.set_size_inches(15, 9, forward=True)

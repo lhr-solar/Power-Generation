@@ -26,7 +26,7 @@ STC = {
     "G": 1000.00,
     "T": 298.15,
 }
-SEARCH_RESOLUTION = 0.001
+SEARCH_RESOLUTION = 0.005
 
 # NOTE: "dist_from_mpp_opt_0" does not work as expected.
 optimizers = ["power_opt_0", "dist_from_mpp_opt_0"]
@@ -71,9 +71,9 @@ def generate_search_space(cells, sum_constraint=None):
     # twice the upper bound distance for two other cells in 3D.
 
     # Generate bounds to search space.
-    d = (
-        min([v_oc - v_mpp for v_mpp, v_oc in zip(v_mpps, v_ocs)]) + 0.3
-    )  # Our constraining factor.
+    d = min(
+        [v_oc - v_mpp for v_mpp, v_oc in zip(v_mpps, v_ocs)]
+    )  #  + 0.3  # Our constraining factor.
 
     # Get points that represent the search space.
     search_space = []
@@ -230,7 +230,12 @@ def generate_matches(
 
             # Generate match
             matches[len(matches)] = {
-                "cell_names": best_permutation[0],
+                "cell_names": {
+                    int(
+                        cell_name
+                    ): f"{' '.join(cells[cell_name]['file_name'].split('_')[:2])}"
+                    for cell_name in best_permutation[0]
+                },
                 "cell_voltages": best_permutation[1][1],
                 "match_metric": best_permutation[1][0],
             }
@@ -253,7 +258,10 @@ def generate_matches(
 
             # Generate match
             matches[len(matches)] = {
-                "cell_names": best_permutation[0],
+                "cell_names": {
+                    cell_name: f"{' '.join(cells[cell_name]['file_name'].split('_')[:2])}"
+                    for cell_name in best_permutation[0]
+                },
                 "cell_voltages": best_permutation[1][1],
                 "match_metric": best_permutation[1][0],
             }

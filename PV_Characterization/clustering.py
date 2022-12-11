@@ -57,9 +57,16 @@ def generate_clusters(cells, heuristic_name, variance_threshold=0.2, debug=False
     for cell_idx, (cell_name, cut_idx) in enumerate(zip(head, cut_indices)):
         cut_idx = int(cut_idx[0])  # Cast as int to prevent json dump errors later.
         if cut_idx not in clusters:
-            clusters[cut_idx] = {"cells": [cell_name], "vectors": [vectors[cell_idx]]}
+            clusters[cut_idx] = {
+                "cells": {
+                    cell_name: f"{' '.join(cells[cell_name]['file_name'].split('_')[:2])}"
+                },
+                "vectors": [vectors[cell_idx]],
+            }
         else:
-            clusters[cut_idx]["cells"].append(cell_name)
+            clusters[cut_idx]["cells"][
+                cell_name
+            ] = f"{' '.join(cells[cell_name]['file_name'].split('_')[:2])}"
             clusters[cut_idx]["vectors"].append(vectors[cell_idx])
 
     # Generate the cluster centroid, variance, and STD.
