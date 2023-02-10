@@ -1,0 +1,24 @@
+{
+    "0": {
+        "cell_names": {
+            "3": "TESTLAMINATED 0",
+            "4": "TESTLAMINATED 1"
+        },
+        "cell_voltages": [
+            0.5170000000000001,
+            0.4940000000000001
+        ],
+        "match_metric": 8.133632952690126
+    },
+    "1": {
+        "cell_names": {
+            "1": "RP TEST2",
+            "5": "laminated control"
+        },
+        "cell_voltages": [
+            0.5670000000000002,
+            0.44400000000000006
+        ],
+        "match_metric": 5.8739962348938
+    }
+}
