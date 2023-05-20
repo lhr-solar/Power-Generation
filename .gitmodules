@@ -1,9 +1,6 @@
 [submodule "Sunscatter/fw/inc/mbed-os"]
 	path = Sunscatter/fw/inc/mbed-os
 	url = https://github.com/ARMmbed/mbed-os
-[submodule "Sunscatter/pcb"]
-	path = Sunscatter/pcb
-	url = https://github.com/lhr-solar/Power-Generation-Sunscatter-PCB.git
 [submodule "Modules"]
 	path = Modules
 	url = https://github.com/lhr-solar/Power-Generation-Solar-Module-PCBs.git
