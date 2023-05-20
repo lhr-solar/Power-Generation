@@ -10,3 +10,6 @@
 [submodule "pv_curve_tracer"]
 	path = pv_curve_tracer
 	url = https://github.com/lhr-solar/Power-Generation-Curve-Tracer.git
+[submodule "sunscatter"]
+	path = sunscatter
+	url = https://github.com/lhr-solar/Power-Generation-Sunscatter.git
