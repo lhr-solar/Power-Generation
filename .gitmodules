@@ -10,3 +10,6 @@
 [submodule "Power-Generation-Eclipse-SW"]
 	path = Power-Generation-Eclipse-SW
 	url = https://github.com/lhr-solar/Power-Generation-Eclipse-SW.git
+[submodule "pv_curve_tracer"]
+	path = pv_curve_tracer
+	url = https://github.com/lhr-solar/Power-Generation-Curve-Tracer.git
