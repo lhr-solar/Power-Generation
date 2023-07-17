@@ -38,6 +38,7 @@ outlined below.
   - Blackbody B
   - Blackbody C
 - Sunspot
+- Heliosphere
 - Eclipse
 - Models
 - Data
@@ -49,6 +50,12 @@ transformation and delivery from the solar array to the vehicle battery
 management system. It consists of a microcontroller actuating a DC-DC boost
 converter, armed with sensors to run a closed loop feedback control consisting
 of both PID controllers and MPPT algorithms to optimize power delivery.
+
+As of July 2023, we have migrated from the old Sunscatter MPPTs
+(`sunscatter_gen1`) to the new Sunscatter MPPTs (`sunscatter_gen2`). The major
+difference between these two are the user specifications and the DC-DC converter
+design. The Gen 2 Sunscatter boards have a higher power density and power
+transfer efficiency for a fraction of the cost.
 
 ### PV Curve Tracer
 

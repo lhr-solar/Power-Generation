@@ -19,3 +19,6 @@
 [submodule "heliosphere"]
 	path = heliosphere
 	url = https://github.com/lhr-solar/Power-Generation-Heliosphere.git
+[submodule "models"]
+	path = models
+	url = https://github.com/lhr-solar/Power-Generation-Models.git
