@@ -1,6 +1,3 @@
-[submodule "Sunscatter/fw/inc/mbed-os"]
-	path = Sunscatter/fw/inc/mbed-os
-	url = https://github.com/ARMmbed/mbed-os
 [submodule "Modules"]
 	path = Modules
 	url = https://github.com/lhr-solar/Power-Generation-Solar-Module-PCBs.git
@@ -10,9 +7,6 @@
 [submodule "pv_curve_tracer"]
 	path = pv_curve_tracer
 	url = https://github.com/lhr-solar/Power-Generation-Curve-Tracer.git
-[submodule "sunscatter"]
-	path = sunscatter
-	url = https://github.com/lhr-solar/Power-Generation-Sunscatter.git
 [submodule "sunscatter_gen2"]
 	path = sunscatter_gen2
 	url = https://github.com/dimembermatt/MPPT-Design.git
@@ -22,3 +16,6 @@
 [submodule "blackbody"]
 	path = blackbody
 	url = https://github.com/lhr-solar/Power-Generation-Blackbody.git
+[submodule "heliosphere"]
+	path = heliosphere
+	url = https://github.com/lhr-solar/Power-Generation-Heliosphere.git
