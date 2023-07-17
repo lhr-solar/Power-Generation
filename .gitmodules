@@ -13,3 +13,12 @@
 [submodule "sunscatter"]
 	path = sunscatter
 	url = https://github.com/lhr-solar/Power-Generation-Sunscatter.git
+[submodule "sunscatter_gen2"]
+	path = sunscatter_gen2
+	url = https://github.com/dimembermatt/MPPT-Design.git
+[submodule "sunscatter_gen1"]
+	path = sunscatter_gen1
+	url = https://github.com/lhr-solar/Power-Generation-Sunscatter.git
+[submodule "blackbody"]
+	path = blackbody
+	url = https://github.com/lhr-solar/Power-Generation-Blackbody.git

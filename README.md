@@ -10,6 +10,7 @@ LHR Solar Power Generation subteam are stashed here.
     - [PV Curve Tracer](#pv-curve-tracer)
     - [Blackbody](#blackbody)
     - [Sunspot](#sunspot)
+    - [Heliosphere](#heliosphere)
     - [Eclipse](#eclipse)
     - [Models](#models)
     - [Data](#data)
@@ -63,8 +64,8 @@ of various parts of the solar array on the car. There are currently three
 variants: **Blackbody A**, **Blackbody B**, and **Blackbody C**.
 
 - **Blackbody A** measures both light sensors (TSL2591) and temperature sensors
-  (RTDs). This board is installed into the solar vehicle for data collection and
-  informing the operation of Sunscatter.
+  (PT100 RTDs). This board is installed into the solar vehicle for data
+  collection and informing the operation of Sunscatter.
 
 - **Blackbody B** manages a sole light sensor (TSL2591). It is primarily used
   for testing and normalization of solar cell/module/array results. It talks to
@@ -79,6 +80,12 @@ variants: **Blackbody A**, **Blackbody B**, and **Blackbody C**.
 Sunspot is a proposed laminator PCB used to automate the process of the solar
 cells. It monitors temperature and vacuum pressure, and provides real-time
 display of the temperature distribution experienced by the laminated cells.
+
+### Heliosphere
+
+Heliosphere is a controls PCB for managing light and temperature control of the
+solar cell and solar module testing setup. It is integrated with the PV Curve
+Tracer and Blackbody B to provide a feedback loop ensuring a consistent test setup.
 
 ### Eclipse
 
