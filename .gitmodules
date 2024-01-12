@@ -25,3 +25,6 @@
 [submodule "eclipse"]
 	path = eclipse
 	url = git@github.com:lhr-solar/Power-Generation-Eclipse-SW.git
+[submodule "characterization"]
+	path = characterization
+	url = git@github.com:lhr-solar/Power-Generation-Characterization.git
