@@ -19,3 +19,6 @@
 [submodule "models"]
 	path = models
 	url = https://github.com/lhr-solar/Power-Generation-Models.git
+[submodule "Power-Generation-Characterization"]
+	path = Power-Generation-Characterization
+	url = git@github.com:lhr-solar/Power-Generation-Characterization.git
